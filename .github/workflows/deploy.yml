@@ -18,39 +18,25 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_HOST_KEY: ${{ secrets.VPS_HOST_KEY }}
         run: |
           install -m 700 -d ~/.ssh
 
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          ssh-keyscan \
-            -p "$VPS_PORT" \
-            -H "$VPS_HOST" \
-            >> ~/.ssh/known_hosts
+          printf '%s %s\n' \
+            "$VPS_HOST" \
+            "$VPS_HOST_KEY" \
+            > ~/.ssh/known_hosts
 
           chmod 600 ~/.ssh/known_hosts
-
-      - name: Test SSH connection
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh \
-            -i ~/.ssh/deploy_key \
-            -p "$VPS_PORT" \
-            -o BatchMode=yes \
-            -o ConnectTimeout=15 \
-            "$VPS_USER@$VPS_HOST" \
-            "echo 'SSH connection successful'"
 
       - name: Upload backend files
         env:
@@ -67,7 +53,7 @@ jobs:
             --exclude='node_modules/' \
             --exclude='logs/' \
             --exclude='*.log' \
-            -e "ssh -i ~/.ssh/deploy_key -p $VPS_PORT" \
+            -e "ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o BatchMode=yes -o ConnectTimeout=30" \
             ./ \
             "$VPS_USER@$VPS_HOST:/var/www/electro-task-backend/"
 
@@ -80,6 +66,8 @@ jobs:
           ssh \
             -i ~/.ssh/deploy_key \
             -p "$VPS_PORT" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=30 \
             "$VPS_USER@$VPS_HOST" <<'REMOTE'
           set -e
 
@@ -92,7 +80,7 @@ jobs:
           pm2 restart electro-task-backend --update-env
           pm2 save
 
-          echo "Waiting for backend health check..."
+          echo "Waiting for backend..."
 
           for attempt in $(seq 1 20); do
             if curl \
@@ -102,19 +90,18 @@ jobs:
               http://127.0.0.1:8600/health
             then
               echo
-              echo "Backend is healthy."
+              echo "Backend deployment completed successfully."
               pm2 status
               exit 0
             fi
 
-            echo "Attempt ${attempt}/20 failed; retrying in 3 seconds..."
+            echo "Health attempt ${attempt}/20 failed."
             sleep 3
           done
 
           echo "Backend failed to become healthy."
           pm2 status
           pm2 logs electro-task-backend --lines 100 --nostream
-
           exit 1
           REMOTE
 
