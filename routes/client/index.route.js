@@ -15,15 +15,12 @@ app.use( "/auth", authRoutes );
 
 
 /* =========================================================
-   PROTECTED PROFILE
+   PROTECTED ROUTES
 ========================================================= */
-app.use( "/profile", checkToken(allowedUsers), clientRoutes );
+app.use( "/", checkToken(allowedUsers), clientRoutes );
+app.use( "/tasks", checkToken(allowedUsers), clientRoutes );
 
-/* =========================================================
-   PROTECTED client PROFILE
-========================================================= */
 
-app.use( checkToken(allowedUsers), clientRoutes );
 
 
 module.exports = app;

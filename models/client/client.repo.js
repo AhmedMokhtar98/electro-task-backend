@@ -47,7 +47,7 @@ function createTokenPayload(client) {
     firstName: client.firstName,
     lastName: client.lastName,
     email: client.email,
-    role: client.role,
+    role: "client",
   };
 }
 
@@ -73,6 +73,31 @@ function isResendCooldownError(error) {
       "errors.otp_resend_too_soon"
   );
 }
+
+// ============================
+// Get authenticated client
+// ============================
+
+exports.getClient = async (clientId) => {
+  const client = await Client.findById(clientId)
+    .select("-password")
+    .lean();
+
+  if (!client) {
+    throw new NotFoundException(
+      "errors.client_not_found"
+    );
+  }
+
+  return {
+    success: true,
+    code: 200,
+    result: {
+      client: sanitizeClient(client),
+    },
+    message: "success.operation_successful",
+  };
+};
 
 // ============================
 // Register
@@ -144,10 +169,7 @@ exports.login = async (formObject = {}) => {
       "errors.invalid_credentials"
     );
   }
-
-  const client = await Client.findOne({
-    email,
-  }).select("+password");
+  const client = await Client.findOne({ email, }).select("+password");
 
   // Prevent exposing whether an email exists.
   if (!client) {
@@ -209,12 +231,9 @@ exports.login = async (formObject = {}) => {
     throw verificationError;
   }
 
-  const payload =
-    createTokenPayload(client);
+  const payload = createTokenPayload(client);
 
-  const token =
-    jwtHelper.generateToken(payload);
-
+  const token = jwtHelper.generateToken(payload);
   return {
     success: true,
     code: 200,

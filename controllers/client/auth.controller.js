@@ -2,6 +2,12 @@
 
 const clientAuthRepo = require("../../models/client/client.repo.js");
 
+exports.getClient = async (req, res) => {
+  console.log(req?.user?._id)
+  const operationResultObject = await clientAuthRepo.getClient(req.user._id);
+  return res.status(operationResultObject.code).json(operationResultObject);
+};
+
 exports.register = async (req, res) => {
   const operationResultObject = await clientAuthRepo.register(req.body);
   return res.status(operationResultObject.code).json(operationResultObject);
