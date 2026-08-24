@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   deploy:
+    name: Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -26,34 +27,112 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
           install -m 700 -d ~/.ssh
+
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
 
-      - name: Upload backend
+          ssh-keyscan \
+            -p "$VPS_PORT" \
+            -H "$VPS_HOST" \
+            >> ~/.ssh/known_hosts
+
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Test SSH connection
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
-          rsync -az --delete \
+          ssh \
+            -i ~/.ssh/deploy_key \
+            -p "$VPS_PORT" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            "$VPS_USER@$VPS_HOST" \
+            "echo 'SSH connection successful'"
+
+      - name: Upload backend files
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          rsync \
+            -az \
+            --delete \
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='.env' \
             --exclude='node_modules/' \
+            --exclude='logs/' \
+            --exclude='*.log' \
             -e "ssh -i ~/.ssh/deploy_key -p $VPS_PORT" \
-            ./ "$VPS_USER@$VPS_HOST:/var/www/electro-task-backend/"
+            ./ \
+            "$VPS_USER@$VPS_HOST:/var/www/electro-task-backend/"
 
-      - name: Install and restart backend
+      - name: Install, restart, and verify backend
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
-          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" \
-            "$VPS_USER@$VPS_HOST" \
-            'cd /var/www/electro-task-backend &&
-             npm ci --omit=dev &&
-             pm2 restart electro-task-backend --update-env &&
-             pm2 save &&
-             curl --fail --retry 5 --retry-delay 3 http://127.0.0.1:8600/health'
+          ssh \
+            -i ~/.ssh/deploy_key \
+            -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" <<'REMOTE'
+          set -e
+
+          cd /var/www/electro-task-backend
+
+          echo "Installing production dependencies..."
+          npm ci --omit=dev
+
+          echo "Restarting backend..."
+          pm2 restart electro-task-backend --update-env
+          pm2 save
+
+          echo "Waiting for backend health check..."
+
+          for attempt in $(seq 1 20); do
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              http://127.0.0.1:8600/health
+            then
+              echo
+              echo "Backend is healthy."
+              pm2 status
+              exit 0
+            fi
+
+            echo "Attempt ${attempt}/20 failed; retrying in 3 seconds..."
+            sleep 3
+          done
+
+          echo "Backend failed to become healthy."
+          pm2 status
+          pm2 logs electro-task-backend --lines 100 --nostream
+
+          exit 1
+          REMOTE
+
+      - name: Verify public API
+        run: |
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 5 \
+            --retry-delay 3 \
+            --retry-all-errors \
+            https://electro-api.hostwover.com/health
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "### Backend deployed successfully" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API: https://electro-api.hostwover.com" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Health: https://electro-api.hostwover.com/health" >> "$GITHUB_STEP_SUMMARY"
