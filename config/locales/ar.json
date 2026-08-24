@@ -45,7 +45,30 @@
     "name_used": "الاسم مستخدم بالفعل",
     "invalid_email_or_password": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
     "passwordTooShort": "كلمة المرور لازم تكون 6 أحرف على الأقل.",
-    "email_already_verified":"الحساب مفعل بالفعل"
+    "email_already_verified":"الحساب مفعل بالفعل",
+    "task_not_found": "المهمة غير موجودة",
+    "valid_task_title": "يجب أن يكون عنوان المهمة نصًا",
+    "empty_task_title": "لا يمكن أن يكون عنوان المهمة فارغًا",
+    "required_task_title": "عنوان المهمة مطلوب",
+    "task_title_too_long": "لا يمكن أن يتجاوز عنوان المهمة 200 حرف",
+    "valid_task_description": "يجب أن يكون وصف المهمة نصًا",
+    "empty_task_description": "لا يمكن أن يكون وصف المهمة فارغًا",
+    "required_task_description": "وصف المهمة مطلوب",
+    "task_description_too_long": "لا يمكن أن يتجاوز وصف المهمة 5000 حرف",
+    "valid_task_status": "يجب أن تكون حالة المهمة: للقيام بها، أو قيد التنفيذ، أو مكتملة",
+    "valid_task_priority": "يجب أن تكون أولوية المهمة منخفضة أو متوسطة أو عالية",
+    "valid_task_due_date": "يجب أن يكون تاريخ استحقاق المهمة تاريخ ISO صالحًا",
+    "required_task_due_date": "تاريخ استحقاق المهمة مطلوب",
+    "valid_page": "يجب أن تكون الصفحة عددًا صحيحًا موجبًا",
+    "valid_limit": "يجب أن يكون الحد عددًا صحيحًا بين 1 و100",
+    "valid_task_search": "يجب أن يكون بحث المهام نصًا غير فارغ",
+    "task_search_too_long": "لا يمكن أن يتجاوز بحث المهام 100 حرف",
+    "valid_task_sort_field": "حقل ترتيب المهام غير صالح",
+    "valid_sort_order": "يجب أن يكون اتجاه الترتيب asc أو desc",
+    "valid_request_body": "يجب أن يكون محتوى الطلب كائنًا",
+    "required_request_body": "محتوى الطلب مطلوب",
+    "empty_task_update": "يجب توفير حقل مهمة واحد على الأقل",
+    "field_not_allowed": "هذا الحقل غير مسموح به"
 
   },
   "success": {
@@ -65,6 +88,11 @@
     "password_reset_otp_sent": "تم إرسال رمز التحقق (OTP) لإعادة تعيين كلمة المرور بنجاح إلى بريدك الإلكتروني",
     "password_reset_successful": "تم إعادة تعيين كلمة المرور بنجاح",
     "token_refreshed": "تم تحديث الرمز بنجاح",
-    "record_disabled": "تم تعطيل السجل بنجاح."
+    "record_disabled": "تم تعطيل السجل بنجاح.",
+    "task_created": "تم إنشاء المهمة بنجاح",
+    "tasks_retrieved": "تم جلب المهام بنجاح",
+    "task_retrieved": "تم جلب المهمة بنجاح",
+    "task_updated": "تم تحديث المهمة بنجاح",
+    "task_deleted": "تم حذف المهمة بنجاح"
    }
 }

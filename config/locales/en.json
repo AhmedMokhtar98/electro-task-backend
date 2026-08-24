@@ -44,7 +44,30 @@
     "invalid_email_or_password": "Invalid email or password",
     "passwordTooShort": "Password must be at least 6 characters.",
     "email_already_verified":"Email already verified",
-    "required_reset_token":"Reset Token Required"
+    "required_reset_token":"Reset Token Required",
+    "task_not_found": "Task not found",
+    "valid_task_title": "Task title must be a string",
+    "empty_task_title": "Task title cannot be empty",
+    "required_task_title": "Task title is required",
+    "task_title_too_long": "Task title cannot exceed 200 characters",
+    "valid_task_description": "Task description must be a string",
+    "empty_task_description": "Task description cannot be empty",
+    "required_task_description": "Task description is required",
+    "task_description_too_long": "Task description cannot exceed 5000 characters",
+    "valid_task_status": "Task status must be To Do, In Progress, or Done",
+    "valid_task_priority": "Task priority must be Low, Medium, or High",
+    "valid_task_due_date": "Task due date must be a valid ISO date",
+    "required_task_due_date": "Task due date is required",
+    "valid_page": "Page must be a positive integer",
+    "valid_limit": "Limit must be an integer between 1 and 100",
+    "valid_task_search": "Task search must be a non-empty string",
+    "task_search_too_long": "Task search cannot exceed 100 characters",
+    "valid_task_sort_field": "Invalid task sort field",
+    "valid_sort_order": "Sort order must be asc or desc",
+    "valid_request_body": "Request body must be an object",
+    "required_request_body": "Request body is required",
+    "empty_task_update": "At least one task field must be provided",
+    "field_not_allowed": "Field is not allowed"
     
   },
   "success": {
@@ -65,6 +88,11 @@
     "password_reset_otp_sent": "Password reset OTP sent successfully to your email",
     "password_reset_successful": "Password has been reset successfully",
     "token_refreshed": "Token refreshed successfully",
-    "record_disabled": "Record disabled successfully."
+    "record_disabled": "Record disabled successfully.",
+    "task_created": "Task created successfully",
+    "tasks_retrieved": "Tasks retrieved successfully",
+    "task_retrieved": "Task retrieved successfully",
+    "task_updated": "Task updated successfully",
+    "task_deleted": "Task deleted successfully"
   }
 }
