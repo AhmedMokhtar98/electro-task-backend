@@ -1,16 +1,22 @@
 # Electro Task Backend
 
-REST API for Electro Task's client authentication and account flows. The
-service provides registration, email verification, login, JWT rotation,
-password recovery, localized responses, Redis-backed OTP storage, and
-distributed rate limiting.
+REST API for Electro Task's client authentication, profile, and task-management
+flows. The service provides registration, email verification, login, JWT
+rotation, password recovery, localized responses, Redis-backed OTP storage,
+distributed rate limiting, and authenticated task CRUD with filtering and
+drag-and-drop order persistence.
 
 ## Features
 
 - Client registration and login
+- Authenticated profile retrieval and updates
 - Email verification with six-digit OTP codes
 - Password-reset links with short-lived JWTs
 - Access and refresh token generation and rotation
+- Per-client task creation, retrieval, update, and deletion
+- Task search, status/priority/date filters, pagination, and sorting
+- Persistent task status and position updates for drag-and-drop boards
+- Ownership checks so clients can access only their own tasks
 - AES-encrypted password fields in API requests
 - English and Arabic responses through `Accept-Language`
 - MongoDB persistence with Mongoose
@@ -41,6 +47,7 @@ distributed rate limiting.
 ├── public/                 # Static assets
 ├── redis/                  # Redis connection and OTP persistence
 ├── routes/                 # Express routers
+├── scripts/                # One-time data migration scripts
 ├── utils/                  # Email templates and utilities
 ├── validations/            # Joi schemas
 ├── views/                  # EJS views
@@ -220,6 +227,8 @@ is 72 UTF-8 bytes.
 
 All paths below are relative to `/api/v1` and require `x-app-token`.
 
+### Public authentication endpoints
+
 | Method | Path | Authentication | Request body |
 | --- | --- | --- | --- |
 | `POST` | `/client/auth/register` | Public | `firstName`, `lastName`, `email`, `password` |
@@ -230,8 +239,23 @@ All paths below are relative to `/api/v1` and require `x-app-token`.
 | `POST` | `/client/auth/password/reset` | Public | `token`, `newPassword` |
 | `POST` | `/client/auth/refresh-token` | Public | `refreshToken` |
 
-`password` and `newPassword` in this table mean AES-encrypted values, not
-plaintext.
+### Protected client endpoints
+
+These endpoints also require `Authorization: Bearer <access-token>`.
+
+| Method | Path | Description | Request body or query |
+| --- | --- | --- | --- |
+| `GET` | `/client/profile` | Get the authenticated client's profile | None |
+| `PUT` | `/client/profile` | Update name and optionally password | `firstName`, `lastName`, or both `oldPassword` and `newPassword` |
+| `POST` | `/client/tasks` | Create a task | `title`, `description`, `dueDate`; optional `status`, `priority` |
+| `GET` | `/client/tasks` | List the client's tasks | Query parameters documented below |
+| `GET` | `/client/tasks/:id` | Get one owned task | None |
+| `PUT`, `PATCH` | `/client/tasks/:id` | Update one owned task | Any supported task field |
+| `DELETE` | `/client/tasks/:id` | Delete one owned task | None |
+| `PUT`, `PATCH` | `/client/tasks/reorder` | Save task status and board position | `tasks` array |
+
+`password`, `oldPassword`, and `newPassword` in this document mean
+AES-encrypted values, not plaintext.
 
 ### Registration example
 
@@ -264,6 +288,113 @@ curl --request POST "http://localhost:7000/api/v1/client/auth/login" \
 ```
 
 A successful login returns both access and refresh tokens.
+
+### Profile
+
+The profile endpoint uses the authenticated client ID from the access token;
+clients cannot provide a different client ID. Email is returned for display but
+is not editable through this endpoint.
+
+```bash
+curl "http://localhost:7000/api/v1/client/profile" \
+  --header "Accept-Language: en" \
+  --header "x-app-token: YOUR_APP_TOKEN" \
+  --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+Update the name, password, or both:
+
+```bash
+curl --request PUT "http://localhost:7000/api/v1/client/profile" \
+  --header "Content-Type: application/json" \
+  --header "x-app-token: YOUR_APP_TOKEN" \
+  --header "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  --data '{
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "oldPassword": "AES_ENCRYPTED_CURRENT_PASSWORD",
+    "newPassword": "AES_ENCRYPTED_NEW_PASSWORD"
+  }'
+```
+
+When a profile update succeeds, `result.token` contains rotated access and
+refresh tokens. Replace both stored tokens before making subsequent requests.
+
+### Tasks
+
+Task status values are `To Do`, `In Progress`, and `Done`. Priority values are
+`Low`, `Medium`, and `High`. New tasks default to `To Do` and `Medium` when
+those optional fields are omitted.
+
+Create a task:
+
+```bash
+curl --request POST "http://localhost:7000/api/v1/client/tasks" \
+  --header "Content-Type: application/json" \
+  --header "x-app-token: YOUR_APP_TOKEN" \
+  --header "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  --data '{
+    "title": "Prepare release notes",
+    "description": "Summarize the completed work for the next release.",
+    "status": "To Do",
+    "priority": "High",
+    "dueDate": "2026-08-31T23:59:59.999Z"
+  }'
+```
+
+The list endpoint supports the following query parameters:
+
+| Parameter | Allowed values | Default |
+| --- | --- | --- |
+| `page` | Positive integer | `1` |
+| `limit` | Integer from `1` to `100` | `10` |
+| `search` | Task-title text, up to 100 characters | None |
+| `status` | `To Do`, `In Progress`, `Done` | None |
+| `priority` | `Low`, `Medium`, `High` | None |
+| `dueDate` | ISO date; matches the full UTC day | None |
+| `sortBy` | `position`, `title`, `status`, `priority`, `dueDate`, `createdAt`, `updatedAt` | `position` |
+| `sortOrder` | `asc`, `desc` | `asc` |
+
+Example filtered request:
+
+```bash
+curl --get "http://localhost:7000/api/v1/client/tasks" \
+  --header "x-app-token: YOUR_APP_TOKEN" \
+  --header "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  --data-urlencode "search=release" \
+  --data-urlencode "status=To Do" \
+  --data-urlencode "priority=High" \
+  --data-urlencode "sortBy=dueDate" \
+  --data-urlencode "sortOrder=asc" \
+  --data-urlencode "page=1" \
+  --data-urlencode "limit=10"
+```
+
+Save drag-and-drop status and positions:
+
+```bash
+curl --request PUT "http://localhost:7000/api/v1/client/tasks/reorder" \
+  --header "Content-Type: application/json" \
+  --header "x-app-token: YOUR_APP_TOKEN" \
+  --header "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  --data '{
+    "tasks": [
+      {
+        "id": "64f000000000000000000001",
+        "status": "In Progress",
+        "position": 1000
+      },
+      {
+        "id": "64f000000000000000000002",
+        "status": "In Progress",
+        "position": 2000
+      }
+    ]
+  }'
+```
+
+Every task query includes the authenticated client ID. Requests for tasks owned
+by another client return `404` rather than exposing whether the task exists.
 
 ## Response format
 
@@ -370,6 +501,20 @@ not a live MongoDB ping on every health request.
 The process also handles `SIGINT` and `SIGTERM`, stops accepting requests,
 closes Redis gracefully, and forces shutdown after 15 seconds if necessary.
 
+## Task position migration
+
+Databases created before the task `position` field was introduced should run
+the backfill once before enabling drag-and-drop ordering:
+
+```bash
+npm run migrate:task-positions
+```
+
+The script requires `MONGO_URL`, groups tasks by client and status, and assigns
+positions in increments of `1000`. It processes writes in batches and can be
+run again safely; tasks already holding the expected positions are skipped.
+Back up production data before running any migration.
+
 ## Production notes
 
 - Set `NODE_ENV=production` and use strong, unique secrets.
@@ -392,17 +537,9 @@ closes Redis gracefully, and forces shutdown after 15 seconds if necessary.
 | --- | --- |
 | `npm run dev` | Runs the API with Nodemon |
 | `node index.js` | Runs the API directly |
+| `npm run migrate:task-positions` | Backfills and normalizes task board positions |
 
 An automated test script is not currently configured.
-
-## Known limitations
-
-- `GET /api/v1/client/profile` is mounted, but its `getClient` controller
-  handler is not currently implemented.
-- The `/api/v1` router root attempts to render `views/index.ejs`, which is not
-  currently present. Use `/` for the existing public view.
-- MongoDB health is validated during startup rather than actively pinged by
-  each `/health` request.
 
 ## License
 
