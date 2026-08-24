@@ -13,6 +13,8 @@ const taskSchema = new mongoose.Schema(
     priority: { type: String, enum: ["Low", "Medium", "High"], default: "Medium", required: true, },
 
     dueDate: { type: Date, required: true, },
+
+    position: { type: Number, default: 0, min: 0, required: true, },
   },
   {
     timestamps: true,
@@ -29,6 +31,12 @@ taskSchema.index({
 });
 
 // Supports case-insensitive task-title search per client.
+taskSchema.index({
+  client: 1,
+  status: 1,
+  position: 1,
+});
+
 taskSchema.index({
   client: 1,
   title: 1,

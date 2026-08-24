@@ -142,6 +142,54 @@ const refreshTokenSchema = Joi.string()
 
 module.exports = {
   // ============================
+  // Authenticated profile update
+  // ============================
+
+  updateProfileValidation: {
+    body: Joi.object({
+      firstName: nameSchema({
+        requiredKey: "errors.requiredFirstName",
+        emptyKey: "errors.emptyFirstName",
+        invalidKey: "errors.validFirstName",
+        minKey: "errors.firstNameTooShort",
+        maxKey: "errors.firstNameTooLong",
+      }).optional(),
+
+      lastName: nameSchema({
+        requiredKey: "errors.requiredLastName",
+        emptyKey: "errors.emptyLastName",
+        invalidKey: "errors.validLastName",
+        minKey: "errors.lastNameTooShort",
+        maxKey: "errors.lastNameTooLong",
+      }).optional(),
+
+      oldPassword: Joi.string()
+        .min(1)
+        .max(PASSWORD_MAX_BYTES)
+        .optional()
+        .messages({
+          "string.base": "errors.validPassword",
+          "string.empty": "errors.emptyPassword",
+          "string.min": "errors.emptyPassword",
+          "string.max": "errors.passwordTooLong",
+        }),
+
+      newPassword: passwordSchema.optional(),
+    })
+      .min(1)
+      .and("oldPassword", "newPassword")
+      .required()
+      .options(joiOptions)
+      .messages({
+        "object.base": "errors.validRequestBody",
+        "object.min": "errors.empty_profile_update",
+        "object.and": "errors.password_fields_together",
+        "object.unknown": "errors.field_not_allowed",
+        "any.required": "errors.requiredRequestBody",
+      }),
+  },
+
+  // ============================
   // Register
   // ============================
 

@@ -9,6 +9,7 @@ const clientSchema = new mongoose.Schema(
     lastName: { type: String, required: true, trim: true, },
     email: { type: String, required: true, unique: true, trim: true, lowercase: true, },
     password: { type: String, required: true, select: false, },
+    passwordChangedAt: { type: Date, default: null, select: false, },
     role: { type: String, default: "client", required: true, },
     isEmailVerified: { type: Boolean, default: false, },
     emailVerifiedAt: { type: Date, default: null, },

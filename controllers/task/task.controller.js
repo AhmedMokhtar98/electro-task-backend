@@ -26,6 +26,11 @@ exports.update = async (req, res) => {
   return sendOperationResult(res, operationResult);
 };
 
+exports.reorder = async (req, res) => {
+  const operationResult = await taskRepo.reorder(req.user._id, req.body.tasks);
+  return sendOperationResult(res, operationResult);
+};
+
 exports.remove = async (req, res) => {
   const operationResult = await taskRepo.remove(
     req.user._id,

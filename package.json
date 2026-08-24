@@ -4,7 +4,8 @@
   "description": "electro task backend",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "migrate:task-positions": "node scripts/backfill-task-positions.js"
   },
   "author": "code with arjun",
   "license": "ISC",

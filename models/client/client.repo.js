@@ -17,6 +17,7 @@ const {
   ConflictException,
   UnauthorizedException,
   ForbiddenException,
+  BadRequestException,
 } = require("../../middlewares/errorHandler/exceptions");
 const { sendPasswordResetEmailToClient } = require("../../helpers/emailService.helper");
 
@@ -37,6 +38,7 @@ function sanitizeClient(client) {
       : { ...client };
 
   delete result.password;
+  delete result.passwordChangedAt;
 
   return result;
 }
@@ -96,6 +98,53 @@ exports.getClient = async (clientId) => {
       client: sanitizeClient(client),
     },
     message: "success.operation_successful",
+  };
+};
+
+// ============================
+// Update authenticated client
+// ============================
+
+exports.updateClient = async (clientId, formObject = {}) => {
+  const client = await Client.findById(clientId).select("+password");
+
+  if (!client) {
+    throw new NotFoundException("errors.client_not_found");
+  }
+
+  if (formObject.oldPassword && formObject.newPassword) {
+    const passwordMatches = await client.comparePassword(
+      formObject.oldPassword
+    );
+
+    if (!passwordMatches) {
+      throw new BadRequestException("errors.password_incorrect");
+    }
+
+    client.password = formObject.newPassword;
+    client.passwordChangedAt = new Date();
+  }
+
+  if (formObject.firstName !== undefined) {
+    client.firstName = formObject.firstName;
+  }
+
+  if (formObject.lastName !== undefined) {
+    client.lastName = formObject.lastName;
+  }
+
+  await client.save();
+
+  const token = jwtHelper.generateToken(createTokenPayload(client));
+
+  return {
+    success: true,
+    code: 200,
+    result: {
+      client: sanitizeClient(client),
+      token,
+    },
+    message: "success.profile_updated",
   };
 };
 

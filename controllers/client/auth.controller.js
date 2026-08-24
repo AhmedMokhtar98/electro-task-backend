@@ -3,8 +3,15 @@
 const clientAuthRepo = require("../../models/client/client.repo.js");
 
 exports.getClient = async (req, res) => {
-  console.log(req?.user?._id)
   const operationResultObject = await clientAuthRepo.getClient(req.user._id);
+  return res.status(operationResultObject.code).json(operationResultObject);
+};
+
+exports.updateClient = async (req, res) => {
+  const operationResultObject = await clientAuthRepo.updateClient(
+    req.user._id,
+    req.body
+  );
   return res.status(operationResultObject.code).json(operationResultObject);
 };
 
