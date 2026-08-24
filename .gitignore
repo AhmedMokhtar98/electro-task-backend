@@ -1,0 +1,7 @@
+node_modules/
+.vscode
+logs/
+policy.json
+.env
+.env.*
+!.env.example
